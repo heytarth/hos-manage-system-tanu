@@ -1,53 +1,15 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+// Local development server
+// For production, the app runs through api/index.js (Vercel serverless)
 
-const app = express();
+const app = require('./api/index.js');
+const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'frontend')));
-
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hos-system', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.log(err));
-
-// Routes
-app.use('/api/auth', require('./backend/src/routes/auth'));
-app.use('/api/waste', require('./backend/src/routes/waste'));
-app.use('/api/compliance', require('./backend/src/routes/compliance'));
-app.use('/api/analytics', require('./backend/src/routes/analytics'));
-app.use('/api/admin', require('./backend/src/routes/admin'));
-
-// Serve index.html for root
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'html', 'index.html'));
-});
-
-// Backward-compatible route after frontend folder reorganization
-app.get('/dashboard.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'frontend', 'html', 'dashboard.html'));
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).sendFile(path.join(__dirname, 'frontend', 'html', '404.html'), (err) => {
-    if (err) res.status(404).json({ message: 'Not Found' });
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard.html\n`);
   });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong' });
+}
 });
 
 const PORT = process.env.PORT || 3000;
