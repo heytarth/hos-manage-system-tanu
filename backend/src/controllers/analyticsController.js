@@ -2,6 +2,7 @@ const Analytics = require('../models/Analytics');
 const { Op } = require('sequelize');
 const { generateCSV, generatePDF, prepareAnalyticsData } = require('../utils/exportUtils');
 const User = require('../models/User');
+const Waste = require('../models/Waste');
 
 async function getHospitalUserIds(userId) {
   const currentUser = await User.findByPk(userId, { attributes: ['hospitalName'] });
@@ -62,6 +63,66 @@ function mergeAnalyticsByDate(records) {
   });
 }
 
+function getDateKeyLocal(value) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function buildAnalyticsFromWaste(hospitalUserIds, startDate) {
+  const wastes = await Waste.findAll({
+    where: {
+      hospitalId: { [Op.in]: hospitalUserIds },
+      submittedAt: { [Op.gte]: startDate }
+    },
+    order: [['submittedAt', 'ASC']]
+  });
+
+  const byDate = new Map();
+
+  wastes.forEach((w) => {
+    const dateKey = getDateKeyLocal(w.submittedAt);
+    if (!dateKey) return;
+
+    if (!byDate.has(dateKey)) {
+      byDate.set(dateKey, {
+        date: new Date(`${dateKey}T00:00:00.000Z`),
+        totalWaste: 0,
+        byCategory: {
+          general: 0,
+          infectious: 0,
+          chemical: 0,
+          radioactive: 0,
+          pharmaceutical: 0
+        },
+        recyclingPercentage: 0
+      });
+    }
+
+    const row = byDate.get(dateKey);
+    const amount = Number(w.amount) || 0;
+    const category = (w.category || 'general').toLowerCase();
+
+    row.totalWaste += amount;
+    if (Object.prototype.hasOwnProperty.call(row.byCategory, category)) {
+      row.byCategory[category] += amount;
+    }
+  });
+
+  const result = Array.from(byDate.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return result.map((row) => {
+    const recycledAmount = Number(row.byCategory.general) || 0;
+    row.recyclingPercentage = row.totalWaste > 0
+      ? Number(((recycledAmount / row.totalWaste) * 100).toFixed(2))
+      : 0;
+    return row;
+  });
+}
+
 function withComputedRecycling(records) {
   return records.map((entry) => {
     const row = entry.toJSON ? entry.toJSON() : entry;
@@ -87,19 +148,8 @@ exports.getAnalytics = async (req, res) => {
 
     const hospitalUserIds = await getHospitalUserIds(req.userId);
 
-    const analytics = await Analytics.findAll({
-      where: {
-        hospitalId: { [Op.in]: hospitalUserIds },
-        date: { [Op.gte]: startDate }
-      },
-      order: [['date', 'ASC']],
-      include: {
-        model: User,
-        attributes: ['id', 'hospitalName', 'email']
-      }
-    });
-
-    res.json(withComputedRecycling(mergeAnalyticsByDate(analytics)));
+    const analytics = await buildAnalyticsFromWaste(hospitalUserIds, startDate);
+    res.json(analytics);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -114,19 +164,7 @@ exports.getWasteTrends = async (req, res) => {
 
     const hospitalUserIds = await getHospitalUserIds(req.userId);
 
-    const trends = await Analytics.findAll({
-      where: {
-        hospitalId: { [Op.in]: hospitalUserIds },
-        date: { [Op.gte]: startDate }
-      },
-      order: [['date', 'ASC']],
-      include: {
-        model: User,
-        attributes: ['id', 'hospitalName']
-      }
-    });
-
-    const mergedTrends = mergeAnalyticsByDate(trends);
+    const mergedTrends = await buildAnalyticsFromWaste(hospitalUserIds, startDate);
 
     const data = mergedTrends.map(t => ({
       date: t.date.toISOString().split('T')[0],
@@ -148,17 +186,6 @@ exports.getCategoryBreakdown = async (req, res) => {
 
     const hospitalUserIds = await getHospitalUserIds(req.userId);
 
-    const analytics = await Analytics.findAll({
-      where: {
-        hospitalId: { [Op.in]: hospitalUserIds },
-        date: { [Op.gte]: startDate }
-      },
-      include: {
-        model: User,
-        attributes: ['id', 'hospitalName']
-      }
-    });
-
     const breakdown = {
       general: 0,
       infectious: 0,
@@ -167,7 +194,7 @@ exports.getCategoryBreakdown = async (req, res) => {
       pharmaceutical: 0
     };
 
-    const mergedAnalytics = mergeAnalyticsByDate(analytics);
+    const mergedAnalytics = await buildAnalyticsFromWaste(hospitalUserIds, startDate);
 
     mergedAnalytics.forEach(a => {
       if (a.byCategory && typeof a.byCategory === 'object') {
@@ -194,19 +221,8 @@ exports.exportAnalyticsCSV = async (req, res) => {
 
     const hospitalUserIds = await getHospitalUserIds(req.userId);
 
-    const analytics = await Analytics.findAll({
-      where: {
-        hospitalId: { [Op.in]: hospitalUserIds },
-        date: { [Op.gte]: startDate }
-      },
-      order: [['date', 'ASC']],
-      include: {
-        model: User,
-        attributes: ['hospitalName']
-      }
-    });
-
-    const data = prepareAnalyticsData(withComputedRecycling(mergeAnalyticsByDate(analytics)));
+    const analytics = await buildAnalyticsFromWaste(hospitalUserIds, startDate);
+    const data = prepareAnalyticsData(analytics);
     const headers = ['Date', 'Total Waste (kg)', 'General', 'Infectious', 'Chemical', 'Radioactive', 'Pharmaceutical', 'Recycling %'];
     const csv = await generateCSV(data, headers);
 
@@ -229,19 +245,8 @@ exports.exportAnalyticsPDF = async (req, res) => {
 
     const hospitalUserIds = await getHospitalUserIds(req.userId);
 
-    const analytics = await Analytics.findAll({
-      where: {
-        hospitalId: { [Op.in]: hospitalUserIds },
-        date: { [Op.gte]: startDate }
-      },
-      order: [['date', 'ASC']],
-      include: {
-        model: User,
-        attributes: ['hospitalName']
-      }
-    });
-
-    const data = prepareAnalyticsData(withComputedRecycling(mergeAnalyticsByDate(analytics)));
+    const analytics = await buildAnalyticsFromWaste(hospitalUserIds, startDate);
+    const data = prepareAnalyticsData(analytics);
     const headers = ['Date', 'Total Waste (kg)', 'General', 'Infectious', 'Chemical', 'Radioactive', 'Pharmaceutical', 'Recycling %'];
     const pdf = await generatePDF('Analytics Report', `Waste Analytics - Last ${days} days`, data, headers);
 
