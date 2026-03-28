@@ -6,6 +6,21 @@ const { Op } = require('sequelize');
 const { generateCSV, generatePDF, prepareWasteData } = require('../utils/exportUtils');
 const User = require('../models/User');
 
+async function getHospitalUserIds(userId) {
+  const currentUser = await User.findByPk(userId, { attributes: ['hospitalName'] });
+  if (!currentUser || !currentUser.hospitalName) {
+    return [userId];
+  }
+
+  const sameHospitalUsers = await User.findAll({
+    where: { hospitalName: currentUser.hospitalName },
+    attributes: ['id']
+  });
+
+  const ids = sameHospitalUsers.map((u) => u.id);
+  return ids.length > 0 ? ids : [userId];
+}
+
 exports.submitWaste = async (req, res) => {
   try {
     const { amount, category, description, imageBase64, useAI } = req.body;
@@ -88,8 +103,10 @@ exports.submitWaste = async (req, res) => {
 
 exports.getWaste = async (req, res) => {
   try {
+    const hospitalUserIds = await getHospitalUserIds(req.userId);
+
     const waste = await Waste.findAll({
-      where: { hospitalId: req.userId },
+      where: { hospitalId: { [Op.in]: hospitalUserIds } },
       order: [['submittedAt', 'DESC']],
       include: {
         model: User,
@@ -105,8 +122,10 @@ exports.getWaste = async (req, res) => {
 
 exports.getRecentWaste = async (req, res) => {
   try {
+    const hospitalUserIds = await getHospitalUserIds(req.userId);
+
     const waste = await Waste.findAll({
-      where: { hospitalId: req.userId },
+      where: { hospitalId: { [Op.in]: hospitalUserIds } },
       order: [['submittedAt', 'DESC']],
       limit: 10,
       include: {
@@ -123,8 +142,10 @@ exports.getRecentWaste = async (req, res) => {
 
 exports.exportWasteCSV = async (req, res) => {
   try {
+    const hospitalUserIds = await getHospitalUserIds(req.userId);
+
     const waste = await Waste.findAll({
-      where: { hospitalId: req.userId },
+      where: { hospitalId: { [Op.in]: hospitalUserIds } },
       order: [['submittedAt', 'DESC']],
       include: {
         model: User,
@@ -147,8 +168,10 @@ exports.exportWasteCSV = async (req, res) => {
 
 exports.exportWastePDF = async (req, res) => {
   try {
+    const hospitalUserIds = await getHospitalUserIds(req.userId);
+
     const waste = await Waste.findAll({
-      where: { hospitalId: req.userId },
+      where: { hospitalId: { [Op.in]: hospitalUserIds } },
       order: [['submittedAt', 'DESC']],
       include: {
         model: User,
