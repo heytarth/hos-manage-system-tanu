@@ -242,6 +242,30 @@ HOS management system/
 npm start -- --port 5000
 ```
 
+## Deploy on Vercel
+
+This project runs with:
+- SQLite for local development
+- Postgres on hosting (via `DATABASE_URL`)
+
+### 1. Import repository
+- Go to Vercel -> `New Project`
+- Import this GitHub repository
+
+### 2. Add environment variables (Vercel Project Settings)
+- `DATABASE_URL` = your managed Postgres connection string
+- `JWT_SECRET` = your JWT secret
+- `GEMINI_API_KEY` = your Gemini API key
+- `NODE_ENV` = `production`
+
+### 3. Deploy
+- Trigger deploy from Vercel dashboard
+- Vercel will use `vercel.json` and route `/api/*` to `api/index.js`
+
+### Notes
+- Do not use SQLite (`hos-system.db`) in production on Vercel.
+- Vercel serverless filesystem is ephemeral; use managed Postgres.
+
 ## Development Notes
 
 - All passwords are hashed using bcryptjs (10 salt rounds)

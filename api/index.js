@@ -31,10 +31,17 @@ Analytics.belongsTo(User, { foreignKey: 'hospitalId', constraints: false });
 // Sync database (creates tables if they don't exist)
 async function initializeDatabase() {
   try {
-    // Ensure foreign keys are disabled before sync
-    await sequelize.query('PRAGMA foreign_keys = OFF');
-    await sequelize.sync({ alter: true });
-    console.log('✓ SQLite database synchronized');
+    if (sequelize.getDialect() === 'sqlite') {
+      // Keep local SQLite behavior as before
+      await sequelize.query('PRAGMA foreign_keys = OFF');
+      await sequelize.sync({ alter: true });
+      console.log('✓ SQLite database synchronized');
+      return;
+    }
+
+    // Hosted DB: avoid schema alter on every cold start
+    await sequelize.sync();
+    console.log('✓ Database synchronized');
   } catch (err) {
     console.error('✗ Database sync error:', err.message);
   }
