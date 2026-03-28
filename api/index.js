@@ -1,5 +1,4 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
@@ -14,30 +13,36 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from frontend
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// MongoDB Connection
-const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/hos-system';
+// SQLite Database Connection via Sequelize
+const sequelize = require('../backend/src/database');
 
-// Connection pool reuse for serverless
-let cachedDb = null;
+// Initialize models
+const User = require('../backend/src/models/User');
+const Waste = require('../backend/src/models/Waste');
+const Compliance = require('../backend/src/models/Compliance');
+const Analytics = require('../backend/src/models/Analytics');
 
-async function connectToDatabase() {
-  if (cachedDb) {
-    return cachedDb;
+// Define associations after models are loaded
+// Simple associations without enforced FK constraints
+Waste.belongsTo(User, { foreignKey: 'hospitalId', constraints: false });
+Compliance.belongsTo(User, { foreignKey: 'hospitalId', constraints: false });
+Analytics.belongsTo(User, { foreignKey: 'hospitalId', constraints: false });
+
+// Sync database (creates tables if they don't exist)
+async function initializeDatabase() {
+  try {
+    // Ensure foreign keys are disabled before sync
+    await sequelize.query('PRAGMA foreign_keys = OFF');
+    await sequelize.sync({ alter: true });
+    console.log('✓ SQLite database synchronized');
+  } catch (err) {
+    console.error('✗ Database sync error:', err.message);
   }
-
-  const db = await mongoose.connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
-
-  cachedDb = db;
-  return db;
 }
 
 // Initialize DB connection (non-blocking)
-connectToDatabase()
-  .then(() => console.log('✓ MongoDB connected'))
-  .catch(err => console.error('✗ MongoDB connection error:', err.message));
+initializeDatabase()
+  .catch(err => console.error('Database initialization error:', err.message));
 
 // Don't wait for DB before starting server
 

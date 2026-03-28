@@ -13,22 +13,20 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Passwords do not match' });
     }
 
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ where: { email } });
     if (user) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    user = new User({
+    user = await User.create({
       hospitalName,
       email,
       password,
       role: role || 'hospital'
     });
 
-    await user.save();
-
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
@@ -36,7 +34,7 @@ exports.signup = async (req, res) => {
     res.status(201).json({
       token,
       user: {
-        id: user._id,
+        id: user.id,
         hospitalName: user.hospitalName,
         email: user.email,
         role: user.role
@@ -56,7 +54,7 @@ exports.signin = async (req, res) => {
       return res.status(400).json({ error: 'Please provide email and password' });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -67,7 +65,7 @@ exports.signin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '30d' }
     );
@@ -75,7 +73,7 @@ exports.signin = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        id: user.id,
         hospitalName: user.hospitalName,
         email: user.email,
         role: user.role

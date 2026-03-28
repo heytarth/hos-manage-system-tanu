@@ -9,7 +9,9 @@ exports.getAllUsers = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const users = await User.find().select('-password');
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] }
+    });
     res.json(users);
   } catch (err) {
     console.error(err);
@@ -23,7 +25,13 @@ exports.getAllWaste = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const waste = await Waste.find().populate('hospitalId', 'hospitalName email').sort({ submittedAt: -1 });
+    const waste = await Waste.findAll({
+      include: {
+        model: User,
+        attributes: ['hospitalName', 'email']
+      },
+      order: [['submittedAt', 'DESC']]
+    });
     res.json(waste);
   } catch (err) {
     console.error(err);
@@ -37,7 +45,12 @@ exports.getAllCompliance = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const compliance = await Compliance.find().populate('hospitalId', 'hospitalName email');
+    const compliance = await Compliance.findAll({
+      include: {
+        model: User,
+        attributes: ['hospitalName', 'email']
+      }
+    });
     res.json(compliance);
   } catch (err) {
     console.error(err);
@@ -51,11 +64,11 @@ exports.getSystemStats = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const totalUsers = await User.countDocuments();
-    const totalWaste = await Waste.countDocuments();
-    const totalHospitals = await User.countDocuments({ role: 'hospital' });
+    const totalUsers = await User.count();
+    const totalWaste = await Waste.count();
+    const totalHospitals = await User.count({ where: { role: 'hospital' } });
 
-    const compliance = await Compliance.find();
+    const compliance = await Compliance.findAll();
     const avgCompliance = compliance.length > 0
       ? compliance.reduce((sum, c) => sum + c.complianceScore, 0) / compliance.length
       : 0;
@@ -78,7 +91,7 @@ exports.verifyWaste = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const waste = await Waste.findById(req.params.id);
+    const waste = await Waste.findByPk(req.params.id);
     if (!waste) {
       return res.status(404).json({ error: 'Waste entry not found' });
     }

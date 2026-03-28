@@ -1,43 +1,54 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../database');
 
-const complianceSchema = new mongoose.Schema({
+const Compliance = sequelize.define('Compliance', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   hospitalId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    type: DataTypes.INTEGER,
+    allowNull: false
   },
   complianceScore: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100
+    type: DataTypes.FLOAT,
+    defaultValue: 0,
+    validate: {
+      min: 0,
+      max: 100
+    }
   },
   status: {
-    type: String,
-    enum: ['pass', 'fail'],
-    default: 'fail'
+    type: DataTypes.ENUM('pass', 'fail'),
+    defaultValue: 'fail'
   },
   wasteSeparation: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   properBins: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   documentation: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
   training: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   },
-  suggestions: [String],
+  suggestions: {
+    type: DataTypes.JSON,
+    defaultValue: []
+  },
   lastUpdated: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Compliance', complianceSchema);
+module.exports = Compliance;

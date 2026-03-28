@@ -6,10 +6,25 @@ const app = require('./api/index.js');
 console.log('App loaded, configuring server...');
 const PORT = process.env.PORT || 3000;
 
-if (require.main === module) {
-  console.log('Starting listen on port', PORT);
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard.html\n`);
+function startServer(port) {
+  console.log('Starting listen on port', port);
+  const server = app.listen(port, () => {
+    console.log(`\nServer running on http://localhost:${port}`);
+    console.log(`Dashboard: http://localhost:${port}/dashboard.html\n`);
   });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      const nextPort = Number(port) + 1;
+      console.error(`Port ${port} is in use. Retrying on ${nextPort}...`);
+      startServer(nextPort);
+      return;
+    }
+
+    throw err;
+  });
+}
+
+if (require.main === module) {
+  startServer(PORT);
 }

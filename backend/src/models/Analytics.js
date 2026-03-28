@@ -1,27 +1,37 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../database');
 
-const analyticsSchema = new mongoose.Schema({
+const Analytics = sequelize.define('Analytics', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   hospitalId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    type: DataTypes.INTEGER,
+    allowNull: false
   },
   date: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   },
-  totalWaste: Number,
+  totalWaste: DataTypes.FLOAT,
   byCategory: {
-    general: { type: Number, default: 0 },
-    infectious: { type: Number, default: 0 },
-    chemical: { type: Number, default: 0 },
-    radioactive: { type: Number, default: 0 },
-    pharmaceutical: { type: Number, default: 0 }
+    type: DataTypes.JSON,
+    defaultValue: {
+      general: 0,
+      infectious: 0,
+      chemical: 0,
+      radioactive: 0,
+      pharmaceutical: 0
+    }
   },
   recyclingPercentage: {
-    type: Number,
-    default: 0
+    type: DataTypes.FLOAT,
+    defaultValue: 0
   }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Analytics', analyticsSchema);
+module.exports = Analytics;

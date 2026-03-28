@@ -136,7 +136,13 @@
 
         <!-- Waste History -->
         <div style="margin-top: 30px;">
-          <h3 style="margin-bottom: 15px;">Waste History</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin: 0;">Waste History</h3>
+            <div>
+              <button class="btn btn-secondary" onclick="exportWasteCSV()" style="margin-right: 10px;">📥 CSV</button>
+              <button class="btn btn-secondary" onclick="exportWastePDF()">📥 PDF</button>
+            </div>
+          </div>
           <div class="card">
             <table class="table">
               <thead>
@@ -206,6 +212,12 @@
           <h3 class="chart-title">Improvement Suggestions</h3>
           <div id="suggestionsList" style="margin-top: 15px;"></div>
         </div>
+
+        <!-- Export Options -->
+        <div style="margin-top: 30px;">
+          <button class="btn btn-primary" onclick="exportCompliancePDF()">📥 Export PDF</button>
+          <button class="btn btn-secondary" onclick="exportComplianceCSV()" style="margin-left: 10px;">📥 Export CSV</button>
+        </div>
       </div>
 
       <!-- Analytics Page -->
@@ -236,8 +248,8 @@
 
         <!-- Export Options -->
         <div style="margin-top: 30px;">
-          <button class="btn btn-primary" onclick="exportPDF()">📥 Export PDF</button>
-          <button class="btn btn-secondary" onclick="exportCSV()" style="margin-left: 10px;">📥 Export CSV</button>
+          <button class="btn btn-primary" onclick="exportAnalyticsPDF()">📥 Export PDF</button>
+          <button class="btn btn-secondary" onclick="exportAnalyticsCSV()" style="margin-left: 10px;">📥 Export CSV</button>
         </div>
       </div>
 

@@ -1,36 +1,41 @@
-const mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../database');
 
-const wasteSchema = new mongoose.Schema({
+const Waste = sequelize.define('Waste', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   hospitalId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    type: DataTypes.INTEGER,
+    allowNull: false
   },
   amount: {
-    type: Number,
-    required: true
+    type: DataTypes.FLOAT,
+    allowNull: false
   },
   unit: {
-    type: String,
-    default: 'kg'
+    type: DataTypes.STRING,
+    defaultValue: 'kg'
   },
   category: {
-    type: String,
-    enum: ['general', 'infectious', 'chemical', 'radioactive', 'pharmaceutical'],
-    default: 'general'
+    type: DataTypes.ENUM('general', 'infectious', 'chemical', 'radioactive', 'pharmaceutical'),
+    defaultValue: 'general'
   },
-  predictedCategory: String,
-  confidence: Number,
-  imageUrl: String,
+  predictedCategory: DataTypes.STRING,
+  confidence: DataTypes.FLOAT,
+  imageUrl: DataTypes.STRING,
   status: {
-    type: String,
-    enum: ['pending', 'verified', 'rejected'],
-    default: 'pending'
+    type: DataTypes.ENUM('pending', 'verified', 'rejected'),
+    defaultValue: 'pending'
   },
   submittedAt: {
-    type: Date,
-    default: Date.now
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Waste', wasteSchema);
+module.exports = Waste;

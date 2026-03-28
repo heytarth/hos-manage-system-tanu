@@ -34,6 +34,8 @@ function logout() {
 
 let dashboardWasteChart = null;
 let dashboardCategoryChart = null;
+let analyticsTrendChart = null;
+let analyticsRecyclingChart = null;
 
 // Page Navigation
 function showPage(pageName) {
@@ -448,16 +450,23 @@ async function loadAnalytics() {
 function loadTrendChart(analytics) {
   const ctx = document.getElementById('trendChart')?.getContext('2d');
   if (ctx) {
-    const labels = analytics.map(a => new Date(a.date).toLocaleDateString());
-    const data = analytics.map(a => a.totalWaste || 0);
+    if (analyticsTrendChart) {
+      analyticsTrendChart.destroy();
+    }
 
-    new Chart(ctx, {
+    const labels = (analytics || []).map(a => new Date(a.date).toLocaleDateString());
+    const data = (analytics || []).map(a => Number(a.totalWaste) || 0);
+
+    const chartLabels = labels.length > 0 ? labels : ['No Data'];
+    const chartData = data.length > 0 ? data : [0];
+
+    analyticsTrendChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: labels,
+        labels: chartLabels,
         datasets: [{
           label: 'Total Waste (kg)',
-          data: data,
+          data: chartData,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.1)',
           tension: 0.4,
@@ -479,13 +488,26 @@ function loadTrendChart(analytics) {
 function loadRecyclingChart(analytics) {
   const ctx = document.getElementById('recyclingChart')?.getContext('2d');
   if (ctx) {
-    new Chart(ctx, {
+    if (analyticsRecyclingChart) {
+      analyticsRecyclingChart.destroy();
+    }
+
+    const labels = (analytics || []).map(a => new Date(a.date).toLocaleDateString());
+    const data = (analytics || []).map(a => {
+      const value = Number(a.recyclingPercentage) || 0;
+      return Number(value.toFixed(2));
+    });
+
+    const chartLabels = labels.length > 0 ? labels : ['No Data'];
+    const chartData = data.length > 0 ? data : [0];
+
+    analyticsRecyclingChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+        labels: chartLabels,
         datasets: [{
           label: 'Recycling Rate (%)',
-          data: [65, 72, 68, 75],
+          data: chartData,
           backgroundColor: '#10b981'
         }]
       },
@@ -501,12 +523,153 @@ function loadRecyclingChart(analytics) {
   }
 }
 
+async function exportAnalyticsPDF() {
+  try {
+    const period = document.getElementById('analyticsPeriod')?.value || '30';
+    const response = await fetch(`/api/analytics/export/pdf?period=${period}`, {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting PDF:', err);
+    alert('Failed to export PDF');
+  }
+}
+
+async function exportAnalyticsCSV() {
+  try {
+    const period = document.getElementById('analyticsPeriod')?.value || '30';
+    const response = await fetch(`/api/analytics/export/csv?period=${period}`, {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting CSV:', err);
+    alert('Failed to export CSV');
+  }
+}
+
+async function exportWastePDF() {
+  try {
+    const response = await fetch('/api/waste/export/pdf', {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `waste-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting PDF:', err);
+    alert('Failed to export PDF');
+  }
+}
+
+async function exportWasteCSV() {
+  try {
+    const response = await fetch('/api/waste/export/csv', {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `waste-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting CSV:', err);
+    alert('Failed to export CSV');
+  }
+}
+
+async function exportCompliancePDF() {
+  try {
+    const response = await fetch('/api/compliance/export/pdf', {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compliance-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting PDF:', err);
+    alert('Failed to export PDF');
+  }
+}
+
+async function exportComplianceCSV() {
+  try {
+    const response = await fetch('/api/compliance/export/csv', {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error('Export failed');
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compliance-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (err) {
+    console.error('Error exporting CSV:', err);
+    alert('Failed to export CSV');
+  }
+}
+
+// Keep old names for backward compatibility
 function exportPDF() {
-  alert('PDF export feature coming soon');
+  exportAnalyticsPDF();
 }
 
 function exportCSV() {
-  alert('CSV export feature coming soon');
+  exportAnalyticsCSV();
 }
 
 // Admin Panel Functions
