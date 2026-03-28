@@ -34,10 +34,12 @@ async function connectToDatabase() {
   return db;
 }
 
-// Initialize DB connection
+// Initialize DB connection (non-blocking)
 connectToDatabase()
   .then(() => console.log('✓ MongoDB connected'))
-  .catch(err => console.error('✗ MongoDB connection error:', err));
+  .catch(err => console.error('✗ MongoDB connection error:', err.message));
+
+// Don't wait for DB before starting server
 
 // Routes
 app.use('/api/auth', require('../backend/src/routes/auth'));
